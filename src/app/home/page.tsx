@@ -111,7 +111,7 @@ export default function HomePage() {
     <div className="p-6 space-y-8 max-w-5xl mx-auto">
       {/* Top bar */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Pharm-Easy1</h1>
+        <h1 className="text-2xl font-bold">Pharm-Easy</h1>
         <div className="flex gap-2">
           {/* 🧩 Added Delete My Account button */}
           <Button variant="secondary" onClick={() => router.push("/home/update-account")}>
