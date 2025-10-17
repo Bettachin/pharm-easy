@@ -40,7 +40,7 @@ export const pharmacies: Pharmacy[] = [
     lat: 12.667570,
     lng: 123.873864,
     hours: "7 AM – 10 PM",
-    medicines: [], // ✅ empty array if no data yet
+    medicines: ["Mefinamic Acid"], // ✅ empty array if no data yet
   },
   {
     id: 5,
@@ -48,7 +48,7 @@ export const pharmacies: Pharmacy[] = [
     lat: 12.666498,
     lng: 123.874714,
     hours: "8 AM – 8 PM",
-    medicines: [],
+    medicines: ["antibiotics", "antiseptics", "pain relievers"],
   },
   {
     id: 6,
