@@ -93,14 +93,34 @@ export default function HomePage() {
     }
   };
 
+  // 🧩 Added delete function
+  const handleDeleteAccount = async () => {
+    const confirmed = confirm("Are you sure you want to permanently delete your account?");
+    if (!confirmed) return;
+
+    const res = await fetch("/api/users/me", { method: "DELETE" });
+    if (res.ok) {
+      alert("Your account has been deleted.");
+      await signOut({ callbackUrl: "/login" });
+    } else {
+      alert("Failed to delete your account.");
+    }
+  };
+
   return (
     <div className="p-6 space-y-8 max-w-5xl mx-auto">
       {/* Top bar */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Pharm-Easy1</h1>
-        <Button variant="outline" onClick={() => signOut({ callbackUrl: "/login" })}>
-          Logout
-        </Button>
+        <div className="flex gap-2">
+          {/* 🧩 Added Delete My Account button */}
+          <Button variant="destructive" onClick={handleDeleteAccount}>
+            Delete My Account
+          </Button>
+          <Button variant="outline" onClick={() => signOut({ callbackUrl: "/login" })}>
+            Logout
+          </Button>
+        </div>
       </div>
 
       <p className="text-lg">Welcome, {session?.user?.name} 👋</p>
