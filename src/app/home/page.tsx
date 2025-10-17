@@ -114,6 +114,9 @@ export default function HomePage() {
         <h1 className="text-2xl font-bold">Pharm-Easy1</h1>
         <div className="flex gap-2">
           {/* 🧩 Added Delete My Account button */}
+          <Button variant="secondary" onClick={() => router.push("/home/update-account")}>
+             Update Account
+          </Button>
           <Button variant="destructive" onClick={handleDeleteAccount}>
             Delete My Account
           </Button>
