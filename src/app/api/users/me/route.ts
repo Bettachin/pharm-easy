@@ -1,32 +1,50 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
 import { PrismaClient } from "@prisma/client";
+import { authOptions } from "@/lib/authOptions";
 
 const prisma = new PrismaClient();
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
   try {
-    // Get the logged-in user's session
+    console.log("🧩 DELETE /api/users/me called");
+
     const session = await getServerSession(authOptions);
+    console.log("Session:", session);
+
     if (!session?.user?.email) {
-      return new Response("Unauthorized", { status: 401 });
+      console.error("❌ No valid session found");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Find the user by email
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
     });
 
     if (!user) {
-      return new Response("User not found", { status: 404 });
+      console.error("❌ User not found in DB");
+      return new Response(JSON.stringify({ error: "User not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Delete user
+    // Optional: prevent deleting admins
+    if (user.role === "admin") {
+      return new Response(JSON.stringify({ error: "Admins cannot delete their account" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Delete the user
     await prisma.user.delete({
-      where: { email: session.user.email },
+      where: { email: user.email },
     });
 
-    // Log the deletion
+    // Log the deletion (optional)
     await prisma.log.create({
       data: {
         action: `User ${user.email} deleted their account.`,
@@ -34,9 +52,19 @@ export async function DELETE() {
       },
     });
 
-    return new Response("Account deleted successfully", { status: 200 });
-  } catch (error) {
-    console.error("Delete account error:", error);
-    return new Response("Internal Server Error", { status: 500 });
+    console.log(`✅ Deleted account: ${user.email}`);
+
+    return new Response(JSON.stringify({ message: "Account deleted successfully" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error: any) {
+    console.error("❌ Delete account error:", error.message);
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  } finally {
+    await prisma.$disconnect();
   }
 }
