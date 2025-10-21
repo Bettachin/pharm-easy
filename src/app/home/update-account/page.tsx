@@ -87,7 +87,7 @@ export default function UpdateAccountPage() {
           className="hidden lg:flex flex-1 justify-center"
         >
           <Image
-            src="/hero-medical.png"
+            src="/update-account.gif"
             alt="Update account illustration"
             width={480}
             height={380}

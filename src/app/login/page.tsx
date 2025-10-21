@@ -79,7 +79,7 @@ export default function LoginPage() {
           className="hidden lg:flex flex-1 justify-center"
         >
           <Image
-            src="/hero-medical.png"
+            src="/login-medical.png"
             alt="Medicine search illustration"
             width={480}
             height={380}

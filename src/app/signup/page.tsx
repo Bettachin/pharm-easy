@@ -112,7 +112,7 @@ export default function SignupPage() {
           className="hidden lg:flex flex-1 justify-center"
         >
           <Image
-            src="/hero-medical.png"
+            src="/signup-health.gif"
             alt="Signup illustration"
             width={480}
             height={380}

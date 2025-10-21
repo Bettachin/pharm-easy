@@ -56,7 +56,7 @@ export default function AboutPage() {
           transition={{ duration: 0.8 }}
         >
           <Image
-            src="/about-illustration.svg"
+            src="/about-illustration.gif"
             alt="Healthcare illustration"
             width={500}
             height={350}

@@ -46,7 +46,7 @@ export default function LandingPage() {
           </h2>
           <p className="text-gray-600 text-lg">
             Pharm-Easy helps you quickly locate nearby pharmacies with the medicine you
-            need — powered by live GPS detection and smart AI-enhanced search.
+            need powered by live GPS detection.
           </p>
 
           <div className="flex flex-wrap gap-4">
@@ -71,7 +71,7 @@ export default function LandingPage() {
           className="flex-1 flex justify-center"
         >
           <Image
-            src="/hero-medical.png"
+            src="/hero-medical.gif"
             alt="Medicine search illustration"
             width={500}
             height={400}
