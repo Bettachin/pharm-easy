@@ -5,28 +5,28 @@ import L from "leaflet";
 import { pharmacies } from "@/lib/pharmacies";
 import { useEffect, useState } from "react";
 
-// 🔵 Default blue icon
+// 🔵 Default blue icon (user location)
 const defaultIcon = L.icon({
-  iconUrl: require("leaflet/dist/images/marker-icon.png"),
-  shadowUrl: require("leaflet/dist/images/marker-shadow.png"),
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 });
 
-// 🟥 Red icon for all pharmacies that have the searched medicine
+// 🟥 Red icon for pharmacies that match search
 const redIcon = L.icon({
   iconUrl:
     "https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-red.png",
-  shadowUrl: require("leaflet/dist/images/marker-shadow.png"),
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 });
 
-// 🟢 Green icon for nearest match
+// 🟢 Green icon for nearest pharmacy
 const greenIcon = L.icon({
   iconUrl:
     "https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-green.png",
-  shadowUrl: require("leaflet/dist/images/marker-shadow.png"),
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 });
@@ -51,34 +51,58 @@ export default function LeafletMap({
 }) {
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
 
-  // 🔑 Fetch route from ORS when userPos & nearestId change
-  useEffect(() => {
-    async function fetchRoute() {
-      if (!userPos || !nearestId) return;
+useEffect(() => {
+  async function fetchRoute() {
+    if (!userPos || !nearestId) return;
 
-      const nearest = results.find((r) => r.id === nearestId);
-      if (!nearest) return;
+    const nearest = results.find((r) => r.id === nearestId);
+    if (!nearest) return;
 
-      try {
-        const res = await fetch(
-          `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${
-            process.env.NEXT_PUBLIC_ORS_KEY
-          }&start=${userPos[1]},${userPos[0]}&end=${nearest.lng},${nearest.lat}`
-        );
-        const data = await res.json();
+    try {
+      console.log("🗺️ Fetching ORS route...");
 
-        const encoded = data.features[0].geometry.coordinates;
-        // ORS returns coordinates as [lng, lat]; we need [lat, lng]
-        const decoded = encoded.map((c: [number, number]) => [c[1], c[0]] as [number, number]);
-        setRouteCoords(decoded);
-      } catch (err) {
-        console.error("Route fetch error:", err);
+      const response = await fetch("https://api.openrouteservice.org/v2/directions/driving-car/geojson", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: process.env.NEXT_PUBLIC_ORS_KEY
+            ? process.env.NEXT_PUBLIC_ORS_KEY.startsWith("Bearer ")
+              ? process.env.NEXT_PUBLIC_ORS_KEY
+              : `Bearer ${process.env.NEXT_PUBLIC_ORS_KEY}`
+            : "",
+        },
+        body: JSON.stringify({
+          coordinates: [
+            [userPos[1], userPos[0]], // start [lng, lat]
+            [nearest.lng, nearest.lat], // end [lng, lat]
+          ],
+          instructions: false,
+          preference: "fastest", // or "shortest"
+        }),
+      });
+
+      const data = await response.json();
+      console.log("ORS Response:", data);
+
+      if (!data.features?.[0]?.geometry?.coordinates) {
+        console.error("❌ No route geometry found:", data);
         setRouteCoords([]);
+        return;
       }
-    }
 
-    fetchRoute();
-  }, [userPos, nearestId, results]);
+      // ✅ Convert [lng, lat] → [lat, lng]
+      const encoded = data.features[0].geometry.coordinates;
+      const decoded = encoded.map((c: [number, number]) => [c[1], c[0]] as [number, number]);
+      setRouteCoords(decoded);
+    } catch (error) {
+      console.error("Route fetch error:", error);
+      setRouteCoords([]);
+    }
+  }
+
+  fetchRoute();
+}, [userPos, nearestId, results]);
+
 
   return (
     <div className="w-full h-[500px] rounded-lg overflow-hidden">
@@ -139,9 +163,9 @@ export default function LeafletMap({
           </Marker>
         ))}
 
-        {/* 🚗 Draw the road path if available */}
+        {/* 🚗 Route path (ORS or fallback) */}
         {routeCoords.length > 0 && (
-          <Polyline positions={routeCoords} color="blue" weight={8} opacity={0.9} />
+          <Polyline positions={routeCoords as any} pathOptions={{ color: "blue", weight: 6, opacity: 0.9 }} />
         )}
       </MapContainer>
     </div>

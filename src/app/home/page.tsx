@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Menu, X } from "lucide-react";
 
 const LeafletMap = dynamic(() => import("@/components/LeafletMap"), { ssr: false });
 
@@ -15,7 +16,7 @@ interface PharmacyResult {
   lat: number;
   lng: number;
   hours: string;
-  distance: number; // km
+  distance: number;
 }
 
 export default function HomePage() {
@@ -23,7 +24,9 @@ export default function HomePage() {
   const router = useRouter();
 
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
+  const [locationDenied, setLocationDenied] = useState(false);
   const [search, setSearch] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
   const [popular] = useState<string[]>([
     "Paracetamol",
     "Ibuprofen",
@@ -34,26 +37,39 @@ export default function HomePage() {
 
   const [results, setResults] = useState<PharmacyResult[]>([]);
   const [nearestId, setNearestId] = useState<number | null>(null);
-  const [medInfo, setMedInfo] = useState<string>(""); // ✅ AI info
+  const [medInfo, setMedInfo] = useState<string>("");
 
-  // Protect route
+  // ✅ Protect route
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated" && session?.user?.role === "admin") router.push("/admin");
   }, [status, session, router]);
 
-  // Ask for GPS
+  // ✅ Request GPS initially
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
-        (err) => console.error("GPS error:", err)
-      );
-    }
+    requestLocation();
   }, []);
 
-  if (status === "loading") return <p>Loading…</p>;
+  const requestLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserPos([pos.coords.latitude, pos.coords.longitude]);
+          setLocationDenied(false);
+        },
+        (err) => {
+          console.error("GPS error:", err);
+          setLocationDenied(true);
+        }
+      );
+    } else {
+      setLocationDenied(true);
+    }
+  };
 
+  if (status === "loading") return <p className="text-center mt-8">Loading…</p>;
+
+  // ✅ Search handler
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userPos) {
@@ -62,7 +78,6 @@ export default function HomePage() {
     }
 
     try {
-      // 1️⃣ Find pharmacies
       const res = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,11 +90,7 @@ export default function HomePage() {
       setResults(matches);
       setNearestId(nearestId);
 
-      if (matches.length === 0) {
-        alert(`No pharmacy found with ${search}`);
-      }
-
-      // 2️⃣ Get AI-generated medicine info
+      // Fetch ready-made medicine info
       const infoRes = await fetch("/api/medicine-info", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -93,7 +104,7 @@ export default function HomePage() {
     }
   };
 
-  // 🧩 Added delete function
+  // ✅ Delete account
   const handleDeleteAccount = async () => {
     const confirmed = confirm("Are you sure you want to permanently delete your account?");
     if (!confirmed) return;
@@ -108,19 +119,45 @@ export default function HomePage() {
   };
 
   return (
-    <div className="p-6 space-y-8 max-w-5xl mx-auto">
-      {/* Top bar */}
+    <div className="p-4 space-y-8 max-w-5xl mx-auto min-h-screen flex flex-col">
+      {/* 🔝 Top bar */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Pharm-Easy</h1>
-        <div className="flex gap-2">
-          {/* 🧩 Added Delete My Account button */}
-          <Button variant="secondary" onClick={() => router.push("/home/update-account")}>
-             Update Account
+
+        {/* 🍔 Hamburger menu (mobile) */}
+        <div className="md:hidden">
+          <Button variant="ghost" size="icon" onClick={() => setMenuOpen(!menuOpen)}>
+            {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </Button>
-          <Button variant="destructive" onClick={handleDeleteAccount}>
+        </div>
+
+        {/* 🧭 Navigation buttons */}
+        <div className={`flex-col md:flex-row gap-2 ${menuOpen ? "flex" : "hidden"} md:flex`}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setMenuOpen(false);
+              router.push("/home/update-account");
+            }}
+          >
+            Update Account
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              setMenuOpen(false);
+              handleDeleteAccount();
+            }}
+          >
             Delete My Account
           </Button>
-          <Button variant="outline" onClick={() => signOut({ callbackUrl: "/login" })}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setMenuOpen(false);
+              signOut({ callbackUrl: "/login" });
+            }}
+          >
             Logout
           </Button>
         </div>
@@ -129,7 +166,10 @@ export default function HomePage() {
       <p className="text-lg">Welcome, {session?.user?.name} 👋</p>
 
       {/* 🔎 Search Bar */}
-      <form onSubmit={handleSearch} className="flex gap-2 max-w-xl">
+      <form
+        onSubmit={handleSearch}
+        className="flex flex-col sm:flex-row gap-2 max-w-xl w-full mx-auto"
+      >
         <Input
           type="text"
           placeholder="Search medicine..."
@@ -137,14 +177,27 @@ export default function HomePage() {
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1"
         />
-        <Button type="submit">Search</Button>
+        <Button type="submit" className="w-full sm:w-auto">
+          Search
+        </Button>
       </form>
 
-      {/* 🗺️ Map */}
-      <LeafletMap userPos={userPos} results={results} nearestId={nearestId} />
+      {/* 🗺️ Map Section */}
+      <div className="w-full h-[400px] sm:h-[500px]">
+        <LeafletMap userPos={userPos} results={results} nearestId={nearestId} />
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-        {/* 📍 Nearest pharmacies list */}
+      {/* 📍 Location Request */}
+      {locationDenied && (
+        <div className="flex justify-center">
+          <Button onClick={requestLocation} className="mt-2">
+            Request Location Access
+          </Button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {/* 🏥 Pharmacy List */}
         {results.length > 0 && (
           <div>
             <h2 className="text-xl font-semibold mb-2">
@@ -156,12 +209,9 @@ export default function HomePage() {
                   key={ph.id}
                   className="border p-3 rounded-lg bg-white shadow-sm"
                 >
-                  <b>{ph.name}</b> – {ph.distance.toFixed(2)} km away
-                  (Hours: {ph.hours})
+                  <b>{ph.name}</b> – {ph.distance.toFixed(2)} km away (Hours: {ph.hours})
                   {ph.id === nearestId && (
-                    <span className="ml-2 text-green-600 font-semibold">
-                      (Nearest)
-                    </span>
+                    <span className="ml-2 text-green-600 font-semibold">(Nearest)</span>
                   )}
                 </li>
               ))}
@@ -169,12 +219,10 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* 💡 AI Medicine Information */}
+        {/* 💊 Medicine Info */}
         {medInfo && (
           <div>
-            <h2 className="text-xl font-semibold mb-2">
-              About {search}
-            </h2>
+            <h2 className="text-xl font-semibold mb-2">About {search}</h2>
             <div className="border p-3 rounded-lg bg-gray-50 whitespace-pre-wrap">
               {medInfo}
             </div>
@@ -182,7 +230,7 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* ⭐ Most Popular Medicines */}
+      {/* ⭐ Popular Medicines */}
       <div className="mt-8">
         <h2 className="text-xl font-semibold mb-2">Most Popular Medicines</h2>
         <ol className="list-decimal list-inside space-y-1">

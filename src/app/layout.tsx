@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Pharm-Easy1",
+  title: "Pharm-Easy",
   description: "Pharmacy locator and medicine info system",
 };
 
