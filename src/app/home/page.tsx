@@ -7,6 +7,8 @@ import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Menu, X } from "lucide-react";
+import Image from "next/image";
+import { motion } from "framer-motion";
 
 const LeafletMap = dynamic(() => import("@/components/LeafletMap"), { ssr: false });
 
@@ -27,14 +29,7 @@ export default function HomePage() {
   const [locationDenied, setLocationDenied] = useState(false);
   const [search, setSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [popular] = useState<string[]>([
-    "Paracetamol",
-    "Ibuprofen",
-    "Vitamin C",
-    "Amoxicillin",
-    "Cough Syrup",
-  ]);
-
+  const [popular] = useState(["Paracetamol", "Ibuprofen", "Vitamin C", "Amoxicillin", "Cough Syrup"]);
   const [results, setResults] = useState<PharmacyResult[]>([]);
   const [nearestId, setNearestId] = useState<number | null>(null);
   const [medInfo, setMedInfo] = useState<string>("");
@@ -90,7 +85,6 @@ export default function HomePage() {
       setResults(matches);
       setNearestId(nearestId);
 
-      // Fetch ready-made medicine info
       const infoRes = await fetch("/api/medicine-info", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -119,99 +113,106 @@ export default function HomePage() {
   };
 
   return (
-    <div className="p-4 space-y-8 max-w-5xl mx-auto min-h-screen flex flex-col">
-      {/* 🔝 Top bar */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Pharm-Easy</h1>
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col">
+      {/* 🌐 Navbar */}
+      <header className="flex justify-between items-center px-6 py-4 shadow-sm bg-white/80 backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <Image src="/logo.png" alt="Pharm-Easy Logo" width={40} height={40} className="rounded-md" />
+          <h1 className="text-2xl font-bold text-blue-700">Pharm-Easy</h1>
+        </div>
 
-        {/* 🍔 Hamburger menu (mobile) */}
+        <div className="flex gap-3 md:flex hidden">
+          <Button variant="secondary" onClick={() => router.push("/home/update-account")}>
+            ⚙️ Update Account
+          </Button>
+          <Button variant="destructive" onClick={handleDeleteAccount}>
+            🗑️ Delete Account
+          </Button>
+          <Button variant="outline" onClick={() => signOut({ callbackUrl: "/login" })}>
+            🚪 Logout
+          </Button>
+        </div>
+
+        {/* 🍔 Mobile Menu */}
         <div className="md:hidden">
           <Button variant="ghost" size="icon" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </Button>
         </div>
+      </header>
 
-        {/* 🧭 Navigation buttons */}
-        <div className={`flex-col md:flex-row gap-2 ${menuOpen ? "flex" : "hidden"} md:flex`}>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setMenuOpen(false);
-              router.push("/home/update-account");
-            }}
-          >
-            Update Account
+      {/* 🧭 Mobile Dropdown Menu */}
+      {menuOpen && (
+        <div className="flex flex-col items-center gap-2 bg-white shadow-md py-3 md:hidden">
+          <Button variant="secondary" onClick={() => router.push("/home/update-account")}>
+            ⚙️ Update Account
           </Button>
-          <Button
-            variant="destructive"
-            onClick={() => {
-              setMenuOpen(false);
-              handleDeleteAccount();
-            }}
-          >
-            Delete My Account
+          <Button variant="destructive" onClick={handleDeleteAccount}>
+            🗑️ Delete Account
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setMenuOpen(false);
-              signOut({ callbackUrl: "/login" });
-            }}
-          >
-            Logout
+          <Button variant="outline" onClick={() => signOut({ callbackUrl: "/login" })}>
+            🚪 Logout
           </Button>
         </div>
-      </div>
+      )}
 
-      <p className="text-lg">Welcome, {session?.user?.name} 👋</p>
+      {/* 🏠 Welcome Section */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-center mt-10 space-y-3"
+      >
+        <h2 className="text-3xl font-bold text-gray-800">
+          Welcome, <span className="text-blue-600">{session?.user?.name}</span> 👋
+        </h2>
+        <p className="text-gray-600">
+          Quickly find nearby pharmacies and get detailed information about your medicines.
+        </p>
+      </motion.div>
 
-      {/* 🔎 Search Bar */}
+      {/* 🔍 Search Section */}
       <form
         onSubmit={handleSearch}
-        className="flex flex-col sm:flex-row gap-2 max-w-xl w-full mx-auto"
+        className="flex flex-col sm:flex-row gap-3 justify-center mt-8 px-6"
       >
         <Input
           type="text"
-          placeholder="Search medicine..."
+          placeholder="🔎 Search for a medicine..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1"
+          className="max-w-lg"
         />
-        <Button type="submit" className="w-full sm:w-auto">
+        <Button type="submit" size="lg">
           Search
         </Button>
       </form>
 
-      {/* 🗺️ Map Section */}
-      <div className="w-full h-[400px] sm:h-[500px]">
+      {/* 🗺️ Map */}
+      <div className="w-full max-w-5xl mx-auto mt-8 h-[450px] rounded-lg overflow-hidden shadow-md">
         <LeafletMap userPos={userPos} results={results} nearestId={nearestId} />
       </div>
 
       {/* 📍 Location Request */}
       {locationDenied && (
-        <div className="flex justify-center">
-          <Button onClick={requestLocation} className="mt-2">
-            Request Location Access
-          </Button>
+        <div className="flex justify-center mt-4">
+          <Button onClick={requestLocation}>Request Location Access</Button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        {/* 🏥 Pharmacy List */}
+      {/* 🏥 Pharmacy & 💊 Info */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-10 px-6 max-w-6xl mx-auto">
         {results.length > 0 && (
-          <div>
-            <h2 className="text-xl font-semibold mb-2">
-              Nearest pharmacies with {search}
-            </h2>
+          <div className="bg-white p-5 rounded-xl shadow-md">
+            <h3 className="text-xl font-semibold mb-3 text-blue-700">
+              🏥 Nearest Pharmacies with {search}
+            </h3>
             <ul className="space-y-2">
               {results.map((ph) => (
-                <li
-                  key={ph.id}
-                  className="border p-3 rounded-lg bg-white shadow-sm"
-                >
+                <li key={ph.id} className="border p-3 rounded-lg bg-blue-50">
                   <b>{ph.name}</b> – {ph.distance.toFixed(2)} km away (Hours: {ph.hours})
                   {ph.id === nearestId && (
-                    <span className="ml-2 text-green-600 font-semibold">(Nearest)</span>
+                    <span className="ml-2 text-green-600 font-semibold">✅ Nearest</span>
                   )}
                 </li>
               ))}
@@ -219,11 +220,12 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* 💊 Medicine Info */}
         {medInfo && (
-          <div>
-            <h2 className="text-xl font-semibold mb-2">About {search}</h2>
-            <div className="border p-3 rounded-lg bg-gray-50 whitespace-pre-wrap">
+          <div className="bg-white p-5 rounded-xl shadow-md">
+            <h3 className="text-xl font-semibold mb-3 text-blue-700">
+              💊 About {search}
+            </h3>
+            <div className="border p-3 rounded-lg bg-blue-50 whitespace-pre-wrap">
               {medInfo}
             </div>
           </div>
@@ -231,14 +233,25 @@ export default function HomePage() {
       </div>
 
       {/* ⭐ Popular Medicines */}
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-2">Most Popular Medicines</h2>
-        <ol className="list-decimal list-inside space-y-1">
+      <section className="mt-12 bg-blue-50 py-10 text-center">
+        <h3 className="text-2xl font-semibold text-gray-800 mb-4">
+          ⭐ Most Popular Medicines
+        </h3>
+        <ol className="list-decimal list-inside text-gray-700 max-w-sm mx-auto space-y-1 text-left">
           {popular.map((med, i) => (
             <li key={i}>{med}</li>
           ))}
         </ol>
-      </div>
+      </section>
+
+      {/* 🌐 Footer */}
+      <footer className="bg-blue-700 text-white py-8 text-center mt-auto">
+        <p className="text-lg font-semibold mb-1">Pharm-Easy © 2025</p>
+        <p className="text-sm opacity-80">
+          Smart Medicine Finder • Project by <b>Ctrl+Alt+Del</b> • Developed by{" "}
+          <b>Zedric Abejuela</b>
+        </p>
+      </footer>
     </div>
   );
 }
